@@ -10,7 +10,8 @@ class Hello extends React.Component {
 	}
 }
 
-React.render(
+console.log("works")
+ReactDOM.render(
 	<HelloWorld parse="ES6"/>, document.getElementById('app2'),
 	<Hello />, document.getElementById('app')
 )
