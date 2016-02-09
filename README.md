@@ -1,6 +1,5 @@
 ##ReactJS Playground
-
-###Playing and testing reactjs. 
+Uses JSX for react components so no JS templates involved in this playground.
 
 ---
 ###Basic usage:
@@ -12,7 +11,6 @@
 ####If the above doesn't work try:
 	- npm install babel-core, gulp, browserify, babel-cli, -g 
 ---
-Uses JSX for react components so no JS templates involved in this playground.
 
 
 ####Required packages version:
