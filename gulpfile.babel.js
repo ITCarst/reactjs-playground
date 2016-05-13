@@ -61,7 +61,7 @@ gulp.task("webpack:build", (callback) => {
 /**
 * Development build
 */
-gulp.task("build:dev", ["webpack:build-dev", "styles"]);
+gulp.task("build:dev", ["webpack:build-dev"]);
 gulp.task("webpack:build-dev", (callback) => {
 	let devCompiler = webpack(clientConfig);
 	// run webpack
@@ -77,9 +77,8 @@ gulp.task("webpack:build-dev", (callback) => {
 /**
 * Watch Task HMR
 */
-gulp.task("serve", ["svg", "images", "webpack-dev-server"]);
-gulp.task("webpack-dev-server", ["build:dev", "styles"], (callback) => {
-
+gulp.task("serve", ["webpack-dev-server"]);
+gulp.task("webpack-dev-server", ["build:dev"], (callback) => {
 	const compiler = webpack(clientConfig);
 	const reload = browserSync.reload;
 	let bundleStart;

@@ -6,12 +6,14 @@ Uses JSX for react components so no JS templates involved in this playground.
  	- git clone https://github.com/IonutC/reactjs-playground
 	- cd reactjs-playground
 	- npm install
-	- gulp or gulp watch 
+	- gulp build - does a pre-production build
+	- gulp build:dev - development build
+	- gulp serve - triggers the watch and opens a localhost:3000
+	
 ---
 ####If the above doesn't work try:
 	- npm install babel-core, gulp, browserify, babel-cli, -g 
 ---
-
 
 ####Required packages version:
 	- node : ^4.x.x
