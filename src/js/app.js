@@ -6,18 +6,28 @@ global.__PROD__ = false;
 
 import React        from 'react';
 import ReactDOM     from 'react-dom';
-import { Router, Route, hashHistory, IndexRedirect} from 'react-router';
+import { Router, Route, browserHistory, IndexRoute} from 'react-router';
 import FastClick    from 'fastclick';
 
-
 //start importing your components
+import AppConstants from './constants/AppConstants'
+import CoreLayout	from './layouts/CoreLayout'
+import MainLayout	from './layouts/MainLayout'
+import HomeView		from './components/HomeView'
+import AboutView 	from './components/AboutView'
+import PageNotFound from './components/NotFoundView';
 
 
 //Executes on loaded content or DOM complete events
 function run() {
 	ReactDOM.render(   
-        <Router history={ hashHistory }>
-            <Route path="*" component={ NotFoundRoute }/>
+        <Router history={ browserHistory }>
+        	<Route path='/' component={CoreLayout}>
+		      	<IndexRoute component={HomeView} />
+		      	<Route path='/about' component={AboutView} />
+		      	<Route path='*' component={PageNotFound} />
+		  	</Route>
+            <Route path="*" component={ PageNotFound }/>
         </Router>,
 		document.getElementById('app')
 	);
