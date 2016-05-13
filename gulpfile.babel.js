@@ -3,47 +3,165 @@
 /*
 * Main entry point for gulp tasks
 */
-import gulp from 'gulp';
-import browserify from 'browserify';
-import fs from 'fs';
-import del from 'del';
-import gutil from 'gulp-util';
-import babelify from 'babelify';
-import debowerify from 'debowerify';
-import watchify from 'watchify';
-import source from 'vinyl-source-stream';
-import reactify from 'reactify';
+import path 			from 'path';
+import gulp 			from 'gulp';
+import gutil 			from 'gulp-util';
+import gulpSequence 	from 'gulp-sequence';
+import browserSync 		from 'browser-sync';
+import express 			from 'express';
 
-gulp.task("js", (cb) => {
-	return browserify({entries: ['./app/js/main.jsx'], extensions: ['.jsx'], debug: true})
-        .transform('babelify', {presets: ['es2015', 'react']})
-        .bundle()
-        .pipe(source('bundle.js'))
-        .pipe(gulp.dest('./dist/'));
+browserSync.create();
+
+//Webpack
+import webpack 				from 'webpack';
+import WebpackDevServer 	from 'webpack-dev-server';
+import webpackDevMiddleware from 'webpack-dev-middleware';
+import webpackHotMiddleware from 'webpack-hot-middleware';
+import {
+	webpackConfig, 
+	clientConfig
+} from './webpack.config.babel';
+
+
+const BUILD_DIR = path.resolve(__dirname, 'build/');
+const APP_DIR = path.resolve(__dirname, 'src/');
+
+
+gulp.task("build", ["webpack:build"]);
+gulp.task("webpack:build", (callback) => {
+	let prodCompiler = webpackConfig;
+
+	webpackConfig.plugins = webpackConfig.plugins.concat(
+		new webpack.DefinePlugin({
+			"process.env": {
+				// This has effect on the react lib size
+				"NODE_ENV": JSON.stringify("production")
+			}
+		}),
+		new webpack.optimize.DedupePlugin(),
+		new webpack.optimize.UglifyJsPlugin({
+			compressor: {
+        		warnings: false,
+        		screw_ie8: true
+      		}
+		})
+	);
+
+	// run webpack
+	webpack(webpackConfig, (err, stats) => {
+		if(err) throw new gutil.PluginError("webpack:build", err);
+		gutil.log("[webpack:build]", stats.toString({
+			colors: true
+		}));
+		callback();
+	});
 });
 
-gulp.task('clean', (cb) => {
-	return del('./dist').then(paths => {
-		console.log("deleted dist folder")
-	}).catch(function (e) {
-		console.log("NOT deleted")
-  	});
+
+/**
+* Development build
+*/
+gulp.task("build:dev", ["webpack:build-dev", "styles"]);
+gulp.task("webpack:build-dev", (callback) => {
+	let devCompiler = webpack(clientConfig);
+	// run webpack
+	devCompiler.run( (err, stats) => {
+		if(err) throw new gutil.PluginError("webpack:build-dev", err);
+		gutil.log("[webpack:build-dev]", stats.toString({
+			colors: true
+		}));
+		callback();
+	});
 });
 
-gulp.task("copy-html", (cb) => {
-	return gulp.src("./app/index.html")
-		.pipe(gulp.dest('./dist'));
+/**
+* Watch Task HMR
+*/
+gulp.task("serve", ["svg", "images", "webpack-dev-server"]);
+gulp.task("webpack-dev-server", ["build:dev", "styles"], (callback) => {
+
+	const compiler = webpack(clientConfig);
+	const reload = browserSync.reload;
+	let bundleStart;
+
+	compiler.plugin('compile', function() {
+		console.log('Compiling...');
+		bundleStart = Date.now();
+   	});
+
+	/**
+	 * Reload all devices when bundle is complete
+	 * or send a fullscreen error message to the browser instead
+	 */
+	compiler.plugin('done', function (stats) {
+	    if (stats.hasErrors() || stats.hasWarnings()) {
+	        return browserSync.sockets.emit('fullscreen:message', {
+	            title: "Webpack Error:",
+	            body:  stripAnsi(stats.toString()),
+	            timeout: 100000
+	        });
+	    }
+	   	console.log('Bundled in ' + (Date.now() - bundleStart) + 'ms!');
+	    browserSync.reload();
+	});
+	
+	const frontServer = new WebpackDevServer(compiler, {
+		// webpack-dev-server options
+		contentBase: BUILD_DIR + "/js",
+		publicPath: webpackConfig.output.publicPath,
+		port: 3000,
+		outputPath: BUILD_DIR,
+		filename: '[name].js',
+		watchOptions: {
+			aggregateTimeout: 300,
+			poll: 1000
+		},
+		lazy: true,
+        inline: true,
+        quiet: false,
+		noInfo: false,
+		hot: true,	 // Enable special support for Hot Module Replacement
+		// pretty colored output
+		stats: {
+            assets: true,
+            colors: true,
+            version: false,
+            hash: true,
+            timings: false,
+            chunks: false,
+            chunkModules: false
+        },
+        historyApiFallback: true,	//access dev server from arbitrary url.
+        headers: { "X-Custom-Header": "yes" }
+	});
+
+	/**
+	 * Run Browsersync and use middleware for Hot Module Replacement
+	 */
+	browserSync({
+		server: {
+			baseDir: './',
+			middleware: [
+				//frontServer,
+				// compiler should be the same as above
+				webpackHotMiddleware(compiler)
+			]
+		},
+		browser: ["google chrome"],
+		// including full page reloads if HMR won't work
+		files: [
+			APP_DIR + '/sass/**/*.scss',
+			APP_DIR + '/js/**/*',
+			APP_DIR + '/images/**/*',
+			APP_DIR + 'index.html',
+			APP_DIR + '/fonts/**/*'
+		]
+	});
+
+	//HTML Changes
+	gulp.watch("*.html").on('change', reload);
+	//CSS Changes
+	gulp.watch('src/sass/**/*.scss', ['styles']).on('change', reload);
+	//JS Watch
+	gulp.watch('src/js/**/*', ['build:dev']).on('change', reload);
 });
-
-gulp.task('default', ['clean'], () => {
-	gulp.start('js', 'copy-html');
-});
-
-gulp.task('watch', () => {
-	gulp.watch('./app/js/main.jsx', ["js"]);
-	gulp.watch('./app/index.html', ["copy-html"]);
-});
-
-
-
-
